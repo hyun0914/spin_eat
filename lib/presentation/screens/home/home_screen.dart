@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,41 +20,103 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> markers = {};
   String categoryCode = '';
 
+  static const _primary = Color(0xFFFF5722);
+  static const _textDark = Color(0xFF1A1A2E);
+  static const _textMuted = Color(0xFF888888);
+
   void storeInfo(Map<String, dynamic>? selectedPlace) {
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return Container(
-          height: 700,
-          color: Colors.blueGrey,
-          child: Column(
-            children: [
-              Text(
-                '가게 이름: ${selectedPlace?['place_name']}\n'
-                '주소: ${selectedPlace?['address_name']}\n'
-                '도로명 주소: ${selectedPlace?['road_address_name']}\n'
-                '전화번호: ${selectedPlace?['phone']}\n'
-                '거리 (미터): ${selectedPlace?['distance']}\n'
-                '카테고리: ${selectedPlace?['category_name']}',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.green
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          12,
+          24,
+          MediaQuery.of(context).padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              GestureDetector(
-                onTap: () => launchUrl(Uri.parse(selectedPlace?['place_url'] ?? '')),
-                child: Text(
-                  '카카오맵에서 보기',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    decoration: TextDecoration.underline,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              selectedPlace?['place_name'] ?? '',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: _textDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              selectedPlace?['category_name'] ?? '',
+              style: const TextStyle(
+                fontSize: 13,
+                color: _primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _InfoRow(
+              icon: Icons.location_on_outlined,
+              text: (selectedPlace?['road_address_name'] as String? ?? '').isNotEmpty
+                  ? selectedPlace!['road_address_name']
+                  : selectedPlace?['address_name'] ?? '',
+            ),
+            if ((selectedPlace?['phone'] as String? ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _InfoRow(
+                icon: Icons.phone_outlined,
+                text: selectedPlace?['phone'] ?? '',
+              ),
+            ],
+            const SizedBox(height: 12),
+            _InfoRow(
+              icon: Icons.near_me_outlined,
+              text: '${selectedPlace?['distance']}m 거리',
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () =>
+                    launchUrl(Uri.parse(selectedPlace?['place_url'] ?? '')),
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: const Text('카카오맵에서 보기'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              )
-            ],
-          ),
-        );
-      },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -62,135 +125,351 @@ class _HomeScreenState extends State<HomeScreen> {
     return BlocBuilder<LocationBloc, LocationState>(
       builder: (context, locationState) {
         if (locationState is LocationLoading) {
-          return Scaffold(
+          return const Scaffold(
+            backgroundColor: Colors.white,
             body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-        if (locationState is LocationLoaded) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: KakaoMap(
-              onMapCreated: ((controller) {
-                mapController = controller;
-              }),
-              markers: markers.toList(),
-              onMarkerTap: (markerId, latLng, zoomLevel) {
-                final state = context.read<PlaceBloc>().state;
-                if (state is PlaceLoaded && state.selectedPlace != null) {
-                  storeInfo(state.selectedPlace);
-                }
-              },
-              center: LatLng(locationState.latitude, locationState.longitude),
-            ),
-            bottomSheet: Container(
-              width: double.infinity,
-              height: 300,
-              color: Colors.blueGrey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            categoryCode = KakaoCategories.restaurant;
-                          });
-                        },
-                        child: Text(
-                          '음식점',
-                          style: TextStyle(
-                            fontSize: 30,
-                          ),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            categoryCode = KakaoCategories.cafe;
-                          });
-                        },
-                        child: Text(
-                          '카페',
-                          style: TextStyle(
-                            fontSize: 30,
-                          ),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            categoryCode = KakaoCategories.convenience;
-                          });
-                        },
-                        child: Text(
-                          '편의점',
-                          style: TextStyle(
-                            fontSize: 30,
-                          ),
-                        ),
-                      ),
-                    ],
+                  CircularProgressIndicator(
+                    color: _primary,
+                    strokeWidth: 2.5,
                   ),
-
-                  ElevatedButton(
-                    onPressed: categoryCode == ''?
-                    null : () {
-                      final state = context.read<LocationBloc>().state;
-                      if (state is LocationLoaded) {
-                        final loadedState = state;
-                        context.read<PlaceBloc>().add(FetchPlaces(
-                          categoryCode: categoryCode,
-                          x: loadedState.longitude,
-                          y: loadedState.latitude,
-                        ));
-                      }
-                    },
-                    child: Text(
-                      '랜덤 가게 선택',
-                      style: TextStyle(
-                        fontSize: 30,
-                      ),
-                    ),
-                  ),
-                  BlocConsumer<PlaceBloc, PlaceState>(
-                    listener: (context, state) {
-                      // 1. FetchPlaces 완료 → 자동으로 PickRandomPlace 호출
-                      if (state is PlaceLoaded && state.selectedPlace == null) {
-                        context.read<PlaceBloc>().add(const PickRandomPlace());
-                      }
-
-                      // 2. PickRandomPlace 완료 → 핀 꽂기
-                      if (state is PlaceLoaded && state.selectedPlace != null) {
-                        mapController?.clearMarker(); // 기존 마커 제거
-                        mapController?.addMarker(
-                          markers: [
-                            Marker(
-                              markerId: 'selected',
-                              latLng: LatLng(
-                                double.parse(state.selectedPlace?['y'] ?? '0'),
-                                double.parse(state.selectedPlace?['x'] ?? '0'),
-                              ),
-                            )
-                          ],
-                        );
-                        storeInfo(state.selectedPlace);
-                      }
-                    },
-                    builder: (context, state) {
-                      if (state is PlaceLoading) return CircularProgressIndicator();
-                      if (state is PlaceLoaded && state.selectedPlace != null) return Text(state.selectedPlace?['place_name'] ?? '');
-                      return Container();
-                    },
+                  SizedBox(height: 16),
+                  Text(
+                    '위치를 가져오는 중...',
+                    style: TextStyle(color: _textMuted, fontSize: 14),
                   ),
                 ],
               ),
             ),
           );
         }
-        return Container();
+
+        if (locationState is LocationLoaded) {
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.dark,
+            child: Scaffold(
+              body: Stack(
+                children: [
+                  KakaoMap(
+                    onMapCreated: (controller) {
+                      mapController = controller;
+                    },
+                    markers: markers.toList(),
+                    onMarkerTap: (markerId, latLng, zoomLevel) {
+                      final state = context.read<PlaceBloc>().state;
+                      if (state is PlaceLoaded && state.selectedPlace != null) {
+                        storeInfo(state.selectedPlace);
+                      }
+                    },
+                    center: LatLng(
+                        locationState.latitude, locationState.longitude),
+                  ),
+
+                  // Floating brand pill
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 16,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Spin',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: _primary,
+                              ),
+                            ),
+                            Text(
+                              'Eat',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: _textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom control panel
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.10),
+                            blurRadius: 24,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        12,
+                        20,
+                        MediaQuery.of(context).padding.bottom + 16,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '카테고리',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _textMuted,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _CategoryChip(
+                                label: '음식점',
+                                icon: Icons.restaurant_rounded,
+                                selected: categoryCode ==
+                                    KakaoCategories.restaurant,
+                                onTap: () => setState(() =>
+                                    categoryCode = KakaoCategories.restaurant),
+                              ),
+                              const SizedBox(width: 8),
+                              _CategoryChip(
+                                label: '카페',
+                                icon: Icons.local_cafe_rounded,
+                                selected:
+                                    categoryCode == KakaoCategories.cafe,
+                                onTap: () => setState(
+                                    () => categoryCode = KakaoCategories.cafe),
+                              ),
+                              const SizedBox(width: 8),
+                              _CategoryChip(
+                                label: '편의점',
+                                icon: Icons.store_rounded,
+                                selected: categoryCode ==
+                                    KakaoCategories.convenience,
+                                onTap: () => setState(() =>
+                                    categoryCode = KakaoCategories.convenience),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          BlocConsumer<PlaceBloc, PlaceState>(
+                            listener: (context, state) {
+                              if (state is PlaceLoaded &&
+                                  state.selectedPlace == null) {
+                                context
+                                    .read<PlaceBloc>()
+                                    .add(const PickRandomPlace());
+                              }
+                              if (state is PlaceLoaded &&
+                                  state.selectedPlace != null) {
+                                mapController?.clearMarker();
+                                mapController?.addMarker(
+                                  markers: [
+                                    Marker(
+                                      markerId: 'selected',
+                                      latLng: LatLng(
+                                        double.parse(
+                                            state.selectedPlace?['y'] ?? '0'),
+                                        double.parse(
+                                            state.selectedPlace?['x'] ?? '0'),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                                storeInfo(state.selectedPlace);
+                              }
+                            },
+                            builder: (context, state) {
+                              final isLoading = state is PlaceLoading;
+                              return SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: (categoryCode == '' || isLoading)
+                                      ? null
+                                      : () {
+                                          final locState = context
+                                              .read<LocationBloc>()
+                                              .state;
+                                          if (locState is LocationLoaded) {
+                                            context
+                                                .read<PlaceBloc>()
+                                                .add(FetchPlaces(
+                                                  categoryCode: categoryCode,
+                                                  x: locState.longitude,
+                                                  y: locState.latitude,
+                                                ));
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _primary,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor:
+                                        const Color(0xFFE0E0E0),
+                                    disabledForegroundColor: Colors.white54,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 0,
+                                    textStyle: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.shuffle_rounded,
+                                                size: 20),
+                                            SizedBox(width: 8),
+                                            Text('랜덤 가게 선택'),
+                                          ],
+                                        ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
       },
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const _primary = Color(0xFFFF5722);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? _primary : const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: selected ? Colors.white : const Color(0xFF888888),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? Colors.white : const Color(0xFF666666),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[400]),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF444444),
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

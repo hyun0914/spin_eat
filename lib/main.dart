@@ -33,7 +33,17 @@ class SpinEatApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        home: HomeScreen(),
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFFF5722),
+            brightness: Brightness.light,
+          ),
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'SF Pro Display',
+        ),
+        home: const HomeScreen(),
       ),
     );
   }
