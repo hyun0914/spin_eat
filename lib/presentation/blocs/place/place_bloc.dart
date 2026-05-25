@@ -24,6 +24,7 @@ class PlaceBloc extends Bloc<PlaceEvent, PlaceState> {
         categoryCode: event.categoryCode,
         x: event.x,
         y: event.y,
+        radius: event.radius
       );
       emit(PlaceLoaded(places: places));
     } catch (e) {

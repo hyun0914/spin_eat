@@ -17,8 +17,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   KakaoMapController? mapController;
-  Set<Marker> markers = {};
   String categoryCode = '';
+  int radius = 500;
+  List<Map<String, dynamic>> placeHistory = [];
 
   static const _primary = Color(0xFFFF5722);
   static const _textDark = Color(0xFF1A1A2E);
@@ -120,6 +121,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _updateCircle(double latitude, double longitude) {
+    mapController?.clearCircle();
+    mapController?.addCircle(circles: [
+      Circle(
+        circleId: '0',
+        center: LatLng(latitude, longitude),
+        strokeWidth: 5,
+        strokeColor: Colors.red,
+        strokeOpacity: 0.5,
+        strokeStyle: StrokeStyle.longDashDotDot,
+        fillColor: Colors.black,
+        fillOpacity: 0.7,
+        radius: radius.toDouble(),
+      ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<LocationBloc, LocationState>(
@@ -155,8 +173,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   KakaoMap(
                     onMapCreated: (controller) {
                       mapController = controller;
+                      mapController?.addCircle(circles: {
+                        Circle(
+                          circleId: '0',
+                          center: LatLng(locationState.latitude, locationState.longitude),
+                          strokeWidth: 5,
+                          strokeColor: Colors.red,
+                          strokeOpacity: 0.5,
+                          strokeStyle: StrokeStyle.longDashDotDot,
+                          fillColor: Colors.black,
+                          fillOpacity: 0.7,
+                          radius: radius.toDouble(),
+                        ),
+                      }.toList());
                     },
-                    markers: markers.toList(),
                     onMarkerTap: (markerId, latLng, zoomLevel) {
                       final state = context.read<PlaceBloc>().state;
                       if (state is PlaceLoaded && state.selectedPlace != null) {
@@ -247,6 +277,64 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: (){
+                              if (placeHistory.isNotEmpty) {
+                                mapController?.clearMarker();
+                                mapController?.clearPolyline();
+                                placeHistory.clear();
+                              }
+                            },
+                            child: Text('초기화'),
+                          ),
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '거리',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _textMuted,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                radius = 300;
+                                _updateCircle(locationState.latitude, locationState.longitude);
+                                }),
+                                child: Text('300m',),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                radius = 500;
+                                _updateCircle(locationState.latitude, locationState.longitude);
+                                }),
+                                child: Text('500m',),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                radius = 1000;
+                                _updateCircle(locationState.latitude, locationState.longitude);
+                                }),
+                                child: Text('1km',),
+                              ),
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                radius = 2000;
+                                _updateCircle(locationState.latitude, locationState.longitude);
+                                }),
+                                child: Text('2km',),
+                              ),
+
+                            ],
+                          ),
+                          const SizedBox(height: 16),
                           const Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -301,21 +389,37 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                               if (state is PlaceLoaded &&
                                   state.selectedPlace != null) {
-                                mapController?.clearMarker();
-                                mapController?.addMarker(
-                                  markers: [
-                                    Marker(
-                                      markerId: 'selected',
-                                      latLng: LatLng(
-                                        double.parse(
-                                            state.selectedPlace?['y'] ?? '0'),
-                                        double.parse(
-                                            state.selectedPlace?['x'] ?? '0'),
-                                      ),
-                                    ),
-                                  ],
-                                );
                                 storeInfo(state.selectedPlace);
+                                if (!placeHistory.any((p) => p['id'] == state.selectedPlace!['id'])) {
+                                  placeHistory.add(state.selectedPlace!);
+                                }
+
+                                mapController?.addMarker(
+                                  markers: placeHistory.asMap().entries.map((entry) {
+                                    return Marker(
+                                      markerId: 'marker_${entry.key}',
+                                      latLng: LatLng(
+                                        double.parse(entry.value['y']),
+                                        double.parse(entry.value['x']),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+
+                                mapController?.clearPolyline();
+                                mapController?.addPolyline(
+                                  polylines: [Polyline(
+                                    polylineId: 'polyline_${placeHistory.length}',
+                                    points: placeHistory.map((entry) {
+                                      return LatLng(
+                                        double.parse(entry['y']),
+                                        double.parse(entry['x']),
+                                      );
+                                    }).toList(),
+                                    strokeColor: Colors.purple,
+                                    strokeWidth: 6,
+                                  )],
+                                );
                               }
                             },
                             builder: (context, state) {
@@ -336,6 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   categoryCode: categoryCode,
                                                   x: locState.longitude,
                                                   y: locState.latitude,
+                                                  radius: radius
                                                 ));
                                           }
                                         },

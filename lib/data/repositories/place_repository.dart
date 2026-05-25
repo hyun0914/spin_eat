@@ -12,7 +12,7 @@ class PlaceRepository {
     required String categoryCode,
     required double x,
     required double y,
-    int radius = 500,
+    required int radius,
   }) async {
     final response = await _dio.get(
       '/v2/local/search/category.json',
