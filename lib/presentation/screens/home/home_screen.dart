@@ -127,15 +127,23 @@ class _HomeScreenState extends State<HomeScreen> {
       Circle(
         circleId: '0',
         center: LatLng(latitude, longitude),
-        strokeWidth: 5,
-        strokeColor: Colors.red,
-        strokeOpacity: 0.5,
-        strokeStyle: StrokeStyle.longDashDotDot,
-        fillColor: Colors.black,
-        fillOpacity: 0.7,
+        strokeWidth: 2,
+        strokeColor: _primary,
+        strokeOpacity: 0.6,
+        strokeStyle: StrokeStyle.solid,
+        fillColor: _primary,
+        fillOpacity: 0.08,
         radius: radius.toDouble(),
       ),
     ]);
+  }
+
+  void _clearHistory() {
+    setState(() {
+      mapController?.clearMarker();
+      mapController?.clearPolyline();
+      placeHistory.clear();
+    });
   }
 
   @override
@@ -173,19 +181,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   KakaoMap(
                     onMapCreated: (controller) {
                       mapController = controller;
-                      mapController?.addCircle(circles: {
+                      mapController?.addCircle(circles: [
                         Circle(
                           circleId: '0',
                           center: LatLng(locationState.latitude, locationState.longitude),
-                          strokeWidth: 5,
-                          strokeColor: Colors.red,
-                          strokeOpacity: 0.5,
-                          strokeStyle: StrokeStyle.longDashDotDot,
-                          fillColor: Colors.black,
-                          fillOpacity: 0.7,
+                          strokeWidth: 2,
+                          strokeColor: _primary,
+                          strokeOpacity: 0.6,
+                          strokeStyle: StrokeStyle.solid,
+                          fillColor: _primary,
+                          fillOpacity: 0.08,
                           radius: radius.toDouble(),
                         ),
-                      }.toList());
+                      ]);
                     },
                     onMarkerTap: (markerId, latLng, zoomLevel) {
                       final state = context.read<PlaceBloc>().state;
@@ -268,6 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Drag handle
                           Container(
                             width: 40,
                             height: 4,
@@ -277,16 +286,75 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: (){
-                              if (placeHistory.isNotEmpty) {
-                                mapController?.clearMarker();
-                                mapController?.clearPolyline();
-                                placeHistory.clear();
-                              }
-                            },
-                            child: Text('초기화'),
+
+                          // History section header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    '히스토리',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _textMuted,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  if (placeHistory.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _primary,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '${placeHistory.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (placeHistory.isNotEmpty)
+                                GestureDetector(
+                                  onTap: _clearHistory,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF5F5F5),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.refresh_rounded,
+                                            size: 13, color: _textMuted),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          '초기화',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                          const SizedBox(height: 14),
+
+                          // Radius section
                           const Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -299,42 +367,53 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              GestureDetector(
+                              _RadiusChip(
+                                label: '300m',
+                                selected: radius == 300,
                                 onTap: () => setState(() {
-                                radius = 300;
-                                _updateCircle(locationState.latitude, locationState.longitude);
+                                  radius = 300;
+                                  _updateCircle(locationState.latitude,
+                                      locationState.longitude);
                                 }),
-                                child: Text('300m',),
                               ),
                               const SizedBox(width: 8),
-                              GestureDetector(
+                              _RadiusChip(
+                                label: '500m',
+                                selected: radius == 500,
                                 onTap: () => setState(() {
-                                radius = 500;
-                                _updateCircle(locationState.latitude, locationState.longitude);
+                                  radius = 500;
+                                  _updateCircle(locationState.latitude,
+                                      locationState.longitude);
                                 }),
-                                child: Text('500m',),
                               ),
                               const SizedBox(width: 8),
-                              GestureDetector(
+                              _RadiusChip(
+                                label: '1km',
+                                selected: radius == 1000,
                                 onTap: () => setState(() {
-                                radius = 1000;
-                                _updateCircle(locationState.latitude, locationState.longitude);
+                                  radius = 1000;
+                                  _updateCircle(locationState.latitude,
+                                      locationState.longitude);
                                 }),
-                                child: Text('1km',),
                               ),
-                              GestureDetector(
+                              const SizedBox(width: 8),
+                              _RadiusChip(
+                                label: '2km',
+                                selected: radius == 2000,
                                 onTap: () => setState(() {
-                                radius = 2000;
-                                _updateCircle(locationState.latitude, locationState.longitude);
+                                  radius = 2000;
+                                  _updateCircle(locationState.latitude,
+                                      locationState.longitude);
                                 }),
-                                child: Text('2km',),
                               ),
-
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
+
+                          // Category section
                           const Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -347,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               _CategoryChip(
@@ -379,6 +458,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                           const SizedBox(height: 14),
+
+                          // Spin button
                           BlocConsumer<PlaceBloc, PlaceState>(
                             listener: (context, state) {
                               if (state is PlaceLoaded &&
@@ -390,12 +471,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (state is PlaceLoaded &&
                                   state.selectedPlace != null) {
                                 storeInfo(state.selectedPlace);
-                                if (!placeHistory.any((p) => p['id'] == state.selectedPlace!['id'])) {
-                                  placeHistory.add(state.selectedPlace!);
+                                if (!placeHistory.any((p) =>
+                                    p['id'] == state.selectedPlace!['id'])) {
+                                  setState(() {
+                                    placeHistory.add(state.selectedPlace!);
+                                  });
                                 }
 
                                 mapController?.addMarker(
-                                  markers: placeHistory.asMap().entries.map((entry) {
+                                  markers: placeHistory
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
                                     return Marker(
                                       markerId: 'marker_${entry.key}',
                                       latLng: LatLng(
@@ -406,20 +493,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                   }).toList(),
                                 );
 
-                                mapController?.clearPolyline();
-                                mapController?.addPolyline(
-                                  polylines: [Polyline(
-                                    polylineId: 'polyline_${placeHistory.length}',
-                                    points: placeHistory.map((entry) {
-                                      return LatLng(
-                                        double.parse(entry['y']),
-                                        double.parse(entry['x']),
-                                      );
-                                    }).toList(),
-                                    strokeColor: Colors.purple,
-                                    strokeWidth: 6,
-                                  )],
-                                );
+                                if (placeHistory.length > 1) {
+                                  mapController?.clearPolyline();
+                                  mapController?.addPolyline(
+                                    polylines: [
+                                      Polyline(
+                                        polylineId:
+                                            'polyline_${placeHistory.length}',
+                                        points: placeHistory.map((entry) {
+                                          return LatLng(
+                                            double.parse(entry['y']),
+                                            double.parse(entry['x']),
+                                          );
+                                        }).toList(),
+                                        strokeColor: _primary,
+                                        strokeWidth: 4,
+                                      )
+                                    ],
+                                  );
+                                }
                               }
                             },
                             builder: (context, state) {
@@ -440,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   categoryCode: categoryCode,
                                                   x: locState.longitude,
                                                   y: locState.latitude,
-                                                  radius: radius
+                                                  radius: radius,
                                                 ));
                                           }
                                         },
@@ -453,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 16),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
                                     elevation: 0,
                                     textStyle: const TextStyle(
@@ -500,6 +592,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _RadiusChip extends StatelessWidget {
+  const _RadiusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const _primary = Color(0xFFFF5722);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? _primary : const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : const Color(0xFF888888),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({
     required this.label,
@@ -540,7 +673,7 @@ class _CategoryChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFF666666),
+                  color: selected ? Colors.white : const Color(0xFF888888),
                 ),
               ),
             ],
