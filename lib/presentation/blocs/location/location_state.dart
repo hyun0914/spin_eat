@@ -18,13 +18,35 @@ final class LocationLoading extends LocationState {
   List<Object> get props => [];
 }
 
-final class LocationLoaded extends LocationState {
+final class LocationWithData extends LocationState {
   final double latitude;
   final double longitude;
 
-  const LocationLoaded({
+  const LocationWithData({
     required this.latitude,
     required this.longitude,
+  });
+
+  @override
+  List<Object> get props => [latitude, longitude];
+}
+
+final class LocationLoaded extends LocationWithData {
+
+  const LocationLoaded({
+    required super.latitude,
+    required super.longitude,
+  });
+
+  @override
+  List<Object> get props => [latitude, longitude];
+}
+
+final class LocationUpdate extends LocationWithData {
+
+  const LocationUpdate({
+    required super.latitude,
+    required super.longitude,
   });
 
   @override

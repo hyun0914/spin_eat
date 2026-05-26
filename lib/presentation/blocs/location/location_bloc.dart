@@ -16,11 +16,19 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       GetLocation event,
       Emitter<LocationState> emit,
       ) async {
-    emit(const LocationLoading());
+    if(state is! LocationLoaded) {
+      emit(const LocationLoading());
+    }
+
     try {
       final location = await locationRepository.getCurrentPosition();
 
-      emit(LocationLoaded(latitude: location.latitude, longitude: location.longitude));
+      if(state is LocationLoaded) {
+        emit(LocationUpdate(latitude: location.latitude, longitude: location.longitude));
+      }
+      else {
+        emit(LocationLoaded(latitude: location.latitude, longitude: location.longitude));
+      }
     } catch (e) {
       emit(LocationError(message: e.toString()));
     }

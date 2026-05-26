@@ -148,7 +148,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocationBloc, LocationState>(
+    return BlocConsumer<LocationBloc, LocationState>(
+      listener: (context, locationState) {
+        if (locationState is LocationUpdate) {
+          _updateCircle(locationState.latitude,
+              locationState.longitude);
+          mapController?.setCenter(LatLng(locationState.latitude, locationState.longitude));
+        }
+      },
       builder: (context, locationState) {
         if (locationState is LocationLoading) {
           return const Scaffold(
@@ -172,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        if (locationState is LocationLoaded) {
+        if (locationState is LocationWithData) {
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.dark,
             child: Scaffold(
@@ -209,41 +216,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   SafeArea(
                     child: Align(
                       alignment: Alignment.topCenter,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 22, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.10),
-                              blurRadius: 16,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Spin',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                color: _primary,
+                      child: GestureDetector(
+                        onTap: () {
+                          context.read<LocationBloc>().add(GetLocation());
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 22, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.10),
+                                blurRadius: 16,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
-                            Text(
-                              'Eat',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                color: _textDark,
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Spin',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                  color: _primary,
+                                ),
                               ),
-                            ),
-                          ],
+                              Text(
+                                'Eat',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                  color: _textDark,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -454,6 +466,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     KakaoCategories.convenience,
                                 onTap: () => setState(() =>
                                     categoryCode = KakaoCategories.convenience),
+                              ),
+                              const SizedBox(width: 8),
+                              _CategoryChip(
+                                label: '대형마트',
+                                icon: Icons.shopping_cart,
+                                selected: categoryCode ==
+                                    KakaoCategories.mart,
+                                onTap: () => setState(() =>
+                                categoryCode = KakaoCategories.mart),
                               ),
                             ],
                           ),
