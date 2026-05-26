@@ -546,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           final locState = context
                                               .read<LocationBloc>()
                                               .state;
-                                          if (locState is LocationLoaded) {
+                                          if (locState is LocationWithData) {
                                             context
                                                 .read<PlaceBloc>()
                                                 .add(FetchPlaces(
