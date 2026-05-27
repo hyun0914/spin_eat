@@ -19,8 +19,8 @@ final class PlaceLoading extends PlaceState {
 }
 
 final class PlaceLoaded extends PlaceState {
-  final List<dynamic> places;
-  final Map<String, dynamic>? selectedPlace;
+  final List<PlaceModel> places;
+  final PlaceModel? selectedPlace;
 
   const PlaceLoaded({
     required this.places,

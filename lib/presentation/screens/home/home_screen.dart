@@ -5,6 +5,7 @@ import 'package:kakao_map_plugin/kakao_map_plugin.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/kakao_categories.dart';
+import '../../../data/models/place_model.dart';
 import '../../blocs/location/location_bloc.dart';
 import '../../blocs/place/place_bloc.dart';
 
@@ -19,13 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   KakaoMapController? mapController;
   String categoryCode = '';
   int radius = 500;
-  List<Map<String, dynamic>> placeHistory = [];
+  List<PlaceModel> placeHistory = [];
 
   static const _primary = Color(0xFFFF5722);
   static const _textDark = Color(0xFF1A1A2E);
   static const _textMuted = Color(0xFF888888);
 
-  void storeInfo(Map<String, dynamic>? selectedPlace) {
+  void storeInfo(PlaceModel selectedPlace) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              selectedPlace?['place_name'] ?? '',
+              selectedPlace.placeName,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -66,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              selectedPlace?['category_name'] ?? '',
+              selectedPlace.categoryName,
               style: const TextStyle(
                 fontSize: 13,
                 color: _primary,
@@ -76,28 +77,28 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             _InfoRow(
               icon: Icons.location_on_outlined,
-              text: (selectedPlace?['road_address_name'] as String? ?? '').isNotEmpty
-                  ? selectedPlace!['road_address_name']
-                  : selectedPlace?['address_name'] ?? '',
+              text: (selectedPlace.roadAddressName as String? ?? '').isNotEmpty
+                  ? selectedPlace.roadAddressName
+                  : selectedPlace.addressName,
             ),
-            if ((selectedPlace?['phone'] as String? ?? '').isNotEmpty) ...[
+            if ((selectedPlace.phone as String? ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
               _InfoRow(
                 icon: Icons.phone_outlined,
-                text: selectedPlace?['phone'] ?? '',
+                text: selectedPlace.phone,
               ),
             ],
             const SizedBox(height: 12),
             _InfoRow(
               icon: Icons.near_me_outlined,
-              text: '${selectedPlace?['distance']}m 거리',
+              text: '${selectedPlace.distance}m 거리',
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () =>
-                    launchUrl(Uri.parse(selectedPlace?['place_url'] ?? '')),
+                    launchUrl(Uri.parse(selectedPlace.placeUrl)),
                 icon: const Icon(Icons.map_outlined, size: 18),
                 label: const Text('카카오맵에서 보기'),
                 style: ElevatedButton.styleFrom(
@@ -205,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onMarkerTap: (markerId, latLng, zoomLevel) {
                       final state = context.read<PlaceBloc>().state;
                       if (state is PlaceLoaded && state.selectedPlace != null) {
-                        storeInfo(state.selectedPlace);
+                        storeInfo(state.selectedPlace!);
                       }
                     },
                     center: LatLng(
@@ -491,9 +492,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                               if (state is PlaceLoaded &&
                                   state.selectedPlace != null) {
-                                storeInfo(state.selectedPlace);
+                                storeInfo(state.selectedPlace!);
                                 if (!placeHistory.any((p) =>
-                                    p['id'] == state.selectedPlace!['id'])) {
+                                    p.id == state.selectedPlace!.id)) {
                                   setState(() {
                                     placeHistory.add(state.selectedPlace!);
                                   });
@@ -507,8 +508,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     return Marker(
                                       markerId: 'marker_${entry.key}',
                                       latLng: LatLng(
-                                        double.parse(entry.value['y']),
-                                        double.parse(entry.value['x']),
+                                        double.parse(entry.value.y),
+                                        double.parse(entry.value.x),
                                       ),
                                     );
                                   }).toList(),
@@ -523,8 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             'polyline_${placeHistory.length}',
                                         points: placeHistory.map((entry) {
                                           return LatLng(
-                                            double.parse(entry['y']),
-                                            double.parse(entry['x']),
+                                            double.parse(entry.y),
+                                            double.parse(entry.x),
                                           );
                                         }).toList(),
                                         strokeColor: _primary,

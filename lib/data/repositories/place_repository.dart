@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../core/config/app_config.dart';
+import '../models/place_model.dart';
 
 class PlaceRepository {
   final Dio _dio = Dio(BaseOptions(
@@ -8,7 +9,7 @@ class PlaceRepository {
     headers: {'Authorization': 'KakaoAK ${AppConfig.kakaoRestKey}'},
   ));
 
-  Future<List<dynamic>> searchByCategory({
+  Future<List<PlaceModel>> searchByCategory({
     required String categoryCode,
     required double x,
     required double y,
@@ -24,6 +25,6 @@ class PlaceRepository {
         'sort': 'distance',
       },
     );
-    return response.data['documents'];
+    return (response.data['documents'] as List).map((json) => PlaceModel.fromJson(json)).toList();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import '../../../data/models/place_model.dart';
 import '../../../data/repositories/place_repository.dart';
 
 part 'place_event.dart';
