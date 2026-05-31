@@ -22,6 +22,20 @@ class _HomeScreenState extends State<HomeScreen> {
   int radius = 500;
   List<PlaceModel> placeHistory = [];
 
+  bool _isSpinning = false;
+  List<PlaceModel> _spinPlaces = [];
+  int _spinIndex = 0;
+  int _spinStep = 0;
+  PlaceModel? _spinWinner;
+
+  static const List<int> _spinDelays = [
+    60, 60, 60, 60, 60, 60,
+    100, 100, 100, 100,
+    180, 180, 180,
+    320, 320,
+    520,
+  ];
+
   static const _primary = Color(0xFFFF5722);
   static const _textDark = Color(0xFF1A1A2E);
   static const _textMuted = Color(0xFF888888);
@@ -147,6 +161,125 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _startSpinAnimation(List<PlaceModel> places) {
+    if (places.isEmpty) return;
+    final shuffled = List<PlaceModel>.from(places)..shuffle();
+    final winner = shuffled.first;
+    setState(() {
+      _isSpinning = true;
+      _spinPlaces = places;
+      _spinWinner = winner;
+      _spinIndex = 0;
+      _spinStep = 0;
+    });
+    _runSpinStep();
+  }
+
+  void _runSpinStep() {
+    if (_spinStep >= _spinDelays.length) {
+      // 슬롯을 당첨 가게 인덱스로 스냅
+      final winnerIndex = _spinPlaces.indexOf(_spinWinner!);
+      setState(() => _spinIndex = winnerIndex >= 0 ? winnerIndex : _spinIndex);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) context.read<PlaceBloc>().add(SelectPlace(_spinWinner!));
+      });
+      return;
+    }
+    Future.delayed(Duration(milliseconds: _spinDelays[_spinStep]), () {
+      if (!mounted) return;
+      setState(() {
+        _spinIndex = (_spinIndex + 1) % _spinPlaces.length;
+        _spinStep++;
+      });
+      _runSpinStep();
+    });
+  }
+
+  Widget _buildSpinOverlay() {
+    final place = _spinPlaces.isNotEmpty ? _spinPlaces[_spinIndex] : null;
+    return Container(
+      color: Colors.black.withValues(alpha: 0.65),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 36),
+          padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 32,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '뽑는 중...',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _textMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 32,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: _primary,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 64,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 80),
+                  transitionBuilder: (child, animation) => SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.6),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    )),
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: Text(
+                    place?.placeName ?? '',
+                    key: ValueKey(_spinIndex),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: _textDark,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                place?.categoryName ?? '',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: _primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<LocationBloc, LocationState>(
@@ -217,17 +350,61 @@ class _HomeScreenState extends State<HomeScreen> {
                   SafeArea(
                     child: Align(
                       alignment: Alignment.topCenter,
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 16,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Spin',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: _primary,
+                              ),
+                            ),
+                            Text(
+                              'Eat',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: _textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Location refresh button
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topRight,
                       child: GestureDetector(
                         onTap: () {
                           context.read<LocationBloc>().add(GetLocation());
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 10),
+                          margin: const EdgeInsets.only(top: 12, right: 16),
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.10),
@@ -236,27 +413,72 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Spin',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 17,
-                                  color: _primary,
-                                ),
-                              ),
-                              Text(
-                                'Eat',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 17,
+                          child: const Icon(
+                            Icons.my_location_rounded,
+                            size: 20,
+                            color: _primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Zoom buttons
+                  Positioned(
+                    right: 16,
+                    top: 0,
+                    bottom: 0,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 16,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                mapController?.setLevel((await mapController?.getLevel() ?? 3) - 1);
+                              },
+                              child: const SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Icon(
+                                  Icons.add_rounded,
+                                  size: 22,
                                   color: _textDark,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            Container(
+                              width: 24,
+                              height: 1,
+                              color: const Color(0xFFEEEEEE),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                mapController?.setLevel((await mapController?.getLevel() ?? 3) + 1);
+                              },
+                              child: const SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Icon(
+                                  Icons.remove_rounded,
+                                  size: 22,
+                                  color: _textDark,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -486,13 +708,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             listener: (context, state) {
                               if (state is PlaceLoaded &&
                                   state.selectedPlace == null) {
-                                context
-                                    .read<PlaceBloc>()
-                                    .add(const PickRandomPlace());
+                                _startSpinAnimation(state.places);
                               }
                               if (state is PlaceLoaded &&
                                   state.selectedPlace != null) {
-                                storeInfo(state.selectedPlace!);
+                                setState(() => _isSpinning = false);
+                                mapController?.setCenter(LatLng(
+                                  double.parse(state.selectedPlace!.y),
+                                  double.parse(state.selectedPlace!.x),
+                                ));
+                                mapController?.setLevel(3);
+                                Future.delayed(
+                                  const Duration(milliseconds: 200),
+                                  () { if (mounted) storeInfo(state.selectedPlace!); },
+                                );
                                 if (!placeHistory.any((p) =>
                                     p.id == state.selectedPlace!.id)) {
                                   setState(() {
@@ -602,6 +831,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
+                  // Spin overlay
+                  if (_isSpinning) _buildSpinOverlay(),
                 ],
               ),
             ),

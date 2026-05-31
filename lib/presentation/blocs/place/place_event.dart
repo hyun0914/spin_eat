@@ -27,3 +27,12 @@ final class PickRandomPlace extends PlaceEvent {
   @override
   List<Object> get props => [];
 }
+
+final class SelectPlace extends PlaceEvent {
+  final PlaceModel place;
+
+  const SelectPlace(this.place);
+
+  @override
+  List<Object> get props => [place];
+}

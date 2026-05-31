@@ -13,6 +13,7 @@ class PlaceBloc extends Bloc<PlaceEvent, PlaceState> {
   PlaceBloc({required this.placeRepository}) : super(const PlaceInitial()) {
     on<FetchPlaces>(_onFetchPlaces);
     on<PickRandomPlace>(_onPickRandomPlace);
+    on<SelectPlace>(_onSelectPlace);
   }
 
   Future<void> _onFetchPlaces(
@@ -43,6 +44,19 @@ class PlaceBloc extends Bloc<PlaceEvent, PlaceState> {
       emit(PlaceLoaded(
         places: current.places,
         selectedPlace: shuffled.first,
+      ));
+    }
+  }
+
+  void _onSelectPlace(
+      SelectPlace event,
+      Emitter<PlaceState> emit,
+      ) {
+    if (state is PlaceLoaded) {
+      final current = state as PlaceLoaded;
+      emit(PlaceLoaded(
+        places: current.places,
+        selectedPlace: event.place,
       ));
     }
   }
